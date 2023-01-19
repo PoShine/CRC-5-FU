@@ -65,7 +65,7 @@ if(F){
 
 dev.off()
 ##validated this prognosis model in the other seven independent cohorts with RFS time
-test_data=paste0(c("GSE14333","GSE17536", "GSE17537", "GSE17538","GSE29621","GSE33113","GSE37892","GSE38832"),".RData")
+test_data=paste0(c("GSE17536", "GSE17537", "GSE17538","GSE29621","GSE33113","GSE37892","GSE38832"),".RData")
 c_index=c()
 p_val=c()
 HR=c()
@@ -162,7 +162,7 @@ print(t(pre_result))
 
 
 #######################################################################3
-##TCGA and Nanostring
+##Nanostring
 {
   GSE39582_exp_matrix <- t(scale(t(GSE39582_exp_matrix)))
   GSE39582.RFS <- GSE39582_exp_matrix[hub_genes,]
@@ -193,7 +193,6 @@ print(t(pre_result))
   }
 }
 
-##Nanostring
 {
   #########################new-nanostring testing cohort
   library(openxlsx)
@@ -238,26 +237,12 @@ print(t(pre_result))
     return(unique_exp)
   }
   
-  ##1-2-3均值表达
-  nanostring_23_expAverage <- nanostring.exp.process(nanostring.exp = nanostring_23_exp,
-                                                     method = "average")
-  ##1-2-3中值表达
-  nanostring_23_expMedian <- nanostring.exp.process(nanostring.exp = nanostring_23_exp,
-                                                    method = "median")
-  ##1-2-3最大值表达
   nanostring_23_max <- nanostring.exp.process(nanostring.exp = nanostring_23_exp,
                                               method = "max")
-  ##1-2-3最小值表达
-  nanostring_23_min <- nanostring.exp.process(nanostring.exp = nanostring_23_exp,
-                                              method = "min")
-  ##1-2-3 MAD最大
-  nanostring_23_mad <- nanostring.exp.process(nanostring.exp = nanostring_23_exp,
-                              method = "MAD")
+
 }
 
-##nanostring_23_expAverage 0.0863;
-##nanostring_23_expMedian 0.0393;
-##nanostring_23_max 0.0124;
+##0.0124;
 test_cli <- nanostring_23_cli
 {
   ##5-years
@@ -276,7 +261,6 @@ if(T){
 
 if(T){
   ##
-  #test_matrix_z <- YuGene(test_matrix)
   test_matrix_z <- t(scale(t(test_matrix)))
   test <- data.frame(t(test_matrix_z[hub_genes,]),stringsAsFactors = F)
   
@@ -292,7 +276,6 @@ if(T){
   }
   
   test_cli$group = group
-  #print(paste0(substr(test_data[k],1,8),".RDS"))
   #saveRDS(test_cli,file = "Nanostring.RDS")
   
   surv.df <- data.frame(test_cli[,1], test_cli[,2], score,stringsAsFactors = F)
@@ -347,101 +330,4 @@ if(T){
   print(surv.p)
   dev.off()
 }
-
-
-#####TCGA
-{
-  load("F:/210E盘文档/colon cancer/TCGA/XenaGDC/TCGA-COAD.Rdata")
-  #tcga_2 = rownames(test_cli)[which(test_cli$pathologic_stage == 'II')]
-  #test_matrix = test_matrix[,tcga_2]
-  test_cli = test_cli[,2:3]
-  test_matrix_z <- t(scale(t(test_matrix)))
-  test <- data.frame(t(test_matrix_z[hub_genes,]),stringsAsFactors = F)
-  
-  pred <- predict(grow.RFS, newdata=test)
-  score <- pred$predicted
-  group <- rep(0, length(score))
-  for (i in 1:length(group)) {
-    if( score[i]<=cut_off) {
-      group[i]<-"low"
-    } else{
-      group[i]<-"high"
-    }
-  }
-  surv.df <- data.frame(test_cli[,1], test_cli[,2], score,stringsAsFactors = F)
-  colnames(surv.df)[1:2] <- c("surtime", "censor")
-  test.survdiff <- survdiff(Surv(surtime,censor)~group,data=surv.df)
-  HR_temp <- (test.survdiff$obs[2]/test.survdiff$exp[2])/(test.survdiff$obs[1]/test.survdiff$exp[1])
-  HR_temp <- round(HR_temp,4)
-  p.val_temp <- round(1 - pchisq(test.survdiff$chisq, 1),4)
-  up95_temp <- exp(log(as.numeric(HR_temp)) + qnorm(0.975)*sqrt(1/test.survdiff$exp[2]+1/test.survdiff$exp[1]))
-  up95_temp <- round(up95_temp,4)
-  low95_temp <- exp(log(as.numeric(HR_temp)) - qnorm(0.975)*sqrt(1/test.survdiff$exp[2]+1/test.survdiff$exp[1]))
-  low95_temp <- round(low95_temp,4)
-  c_index_temp <- rcorr.cens(-surv.df$score, Surv(surv.df$surtime, surv.df$censor))[1]
-  c_index_temp <- round(c_index_temp,4)
-  plot(survfit(Surv(surtime,censor)~group,data=surv.df),xlab="Survival in months", ylab="Survival probability",
-       col=c("red","darkblue"),bty="l",lwd=4)
-  title(main=paste("TCGA", "(pvalue=", p.val_temp, ")", sep="" ),cex.main=1, adj=0.4)
-  legend("topright", legend=c("high","low"), lty=1,col=c("red", "darkblue"),bty = "n",lwd = 4)
-  legend("bottomleft",legend=c(paste0("C index:",c_index_temp),
-                               paste0("p valu:",p.val_temp),
-                               paste0("HR:",HR_temp),
-                               paste0("up95:",up95_temp),
-                               paste0("low95:",low95_temp)))
-  
-}
-
-
-#####TCGA
-{
-  load("H:/210E盘文档/colon cancer/0DataAndScript/0.TCGA_XenaGDC/TCGA-COAD.Rdata")
-  load("H:/210E盘文档/colon cancer/0DataAndScript/0.TCGA_XenaGDC/TCGA-READ.Rdata")
-  test_cli = rbind(test_cli,test_cli_read)
-  test_matrix = cbind(test_matrix,test_matrix_read)
-  #tcga_2 = rownames(test_cli)[which(test_cli$pathologic_stage == 'II')]
-  #test_matrix = test_matrix[,tcga_2]
-  test_cli = test_cli[,2:3]
-  test_matrix_z <- t(scale(t(test_matrix)))
-  test <- data.frame(t(test_matrix_z[hub_genes,]),stringsAsFactors = F)
-  
-  pred <- predict(grow.RFS, newdata=test)
-  score <- pred$predicted
-  group <- rep(0, length(score))
-  for (i in 1:length(group)) {
-    if( score[i]<=cut_off) {
-      group[i]<-"low"
-    } else{
-      group[i]<-"high"
-    }
-  }
-  surv.df <- data.frame(test_cli[,1], test_cli[,2], score,stringsAsFactors = F)
-  colnames(surv.df)[1:2] <- c("surtime", "censor")
-  test.survdiff <- survdiff(Surv(surtime,censor)~group,data=surv.df)
-  HR_temp <- (test.survdiff$obs[2]/test.survdiff$exp[2])/(test.survdiff$obs[1]/test.survdiff$exp[1])
-  HR_temp <- round(HR_temp,4)
-  p.val_temp <- round(1 - pchisq(test.survdiff$chisq, 1),4)
-  up95_temp <- exp(log(as.numeric(HR_temp)) + qnorm(0.975)*sqrt(1/test.survdiff$exp[2]+1/test.survdiff$exp[1]))
-  up95_temp <- round(up95_temp,4)
-  low95_temp <- exp(log(as.numeric(HR_temp)) - qnorm(0.975)*sqrt(1/test.survdiff$exp[2]+1/test.survdiff$exp[1]))
-  low95_temp <- round(low95_temp,4)
-  c_index_temp <- rcorr.cens(-surv.df$score, Surv(surv.df$surtime, surv.df$censor))[1]
-  c_index_temp <- round(c_index_temp,4)
-  plot(survfit(Surv(surtime,censor)~group,data=surv.df),xlab="Survival in months", ylab="Survival probability",
-       col=c("red","darkblue"),bty="l",lwd=4)
-  title(main=paste("TCGA", "(pvalue=", p.val_temp, ")", sep="" ),cex.main=1, adj=0.4)
-  legend("topright", legend=c("high","low"), lty=1,col=c("red", "darkblue"),bty = "n",lwd = 4)
-  legend("bottomleft",legend=c(paste0("C index:",c_index_temp),
-                               paste0("p valu:",p.val_temp),
-                               paste0("HR:",HR_temp),
-                               paste0("up95:",up95_temp),
-                               paste0("low95:",low95_temp)))
-  
-}
-
-
-
-
-
-
 

@@ -348,7 +348,7 @@ save(random_result,file = "random_18genes_result_5years.RData")
 
 random_result_df = na.omit(as.data.frame(random_result))
 
-load("random_18genes_result_5years.RData")
+
 hub_genes.18.survival.result <- c(0.5999,0.6800,0.6199,0.7255,0.7228,0.8700,0.7292)
 boxplot(hub_genes.18.survival.result, unlist(random_result_df), ylim=c(0.4,1),
         names=c("Hub gene set","Random 18 genes"), col=color)

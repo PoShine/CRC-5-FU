@@ -20,17 +20,12 @@ load("1.primary data/train/hub_probe.RData")
 library(randomForestSRC)
 library(survival)
 library(Hmisc)
-#hub_genes <- as.character(hub_probe$gene[1:24])[c(1,2,4,7:11,13,15,16,18,19,23)]
-#hub_genes <- as.character(hub_probe$gene[1:6])
 #select the sample of training set
 hub_genes <- as.character(hub_probe$gene[1:18])
 
-#hub_genes <- hub_genes[c(1:2,4:6,8:10,13,15:16)]
 hub_genes
 ###
-hub_genes_combn <- combn(hub_genes,10)
-hub_genes <- hub_genes_combn[,10651]
-hub_genes
+hub_genes <- c("THY1","BUB1","DEPDC1","STON1","ATAD2","HSD17B2","TPX2","AURKB","CYR61","FAM84A")
 
 #hub_genes <- c(hub_genes,"CYR61","FAM84A")
 dim(drug_all_1) #203  21
@@ -75,7 +70,7 @@ GSE39582_rfs_score.cat$GSE39582_rfs_score = plyr::revalue(GSE39582_rfs_score.cat
 all(rownames(GSE39582_rfs_score.surv) == rownames(GSE39582_rfs_score.cat))
 GSE39582.info.ACT = cbind(GSE39582_rfs_score.cat, GSE39582_rfs_score.surv$GSE39582_rfs_score)
 colnames(GSE39582.info.ACT)[3:4] = c("group","score")
-save(GSE39582.info.ACT, file = "Script/2022.11.03/GSE39582.10gene.RData")
+#save(GSE39582.info.ACT, file = "Script/2022.11.03/GSE39582.10gene.RData")
 
 
 
@@ -417,18 +412,8 @@ summary(uni.cox.stage)
 ## age+sex+group+stage
 mul.cox <- coxph(Surv(time, event) ~ Group+Age+Sex+Stage, data = cox.info.gse17538)
 summary(mul.cox)
-mul.cox1 <- coxph(Surv(time, event) ~ score+Age+Sex+Stage, data = cox.info.gse17538)
-summary(mul.cox1)
 #基础森林图
 ggforest(mul.cox,  #coxph得到的Cox回归结果
-         data = cox.info.gse17538,  #数据集
-         main = 'Hazard ratio of GSE17538',  #标题
-         cpositions = c(0.05, 0.15, 0.35),  #前三列距离
-         fontsize = 1, #字体大小
-         refLabel = 'reference', #相对变量的数值标签，也可改为1
-         noDigits = 3 #保留HR值以及95%CI的小数位数
-)
-ggforest(mul.cox1,  #coxph得到的Cox回归结果
          data = cox.info.gse17538,  #数据集
          main = 'Hazard ratio of GSE17538',  #标题
          cpositions = c(0.05, 0.15, 0.35),  #前三列距离
@@ -439,7 +424,7 @@ ggforest(mul.cox1,  #coxph得到的Cox回归结果
 
 
 #######################################################################3
-##TCGA and Nanostring
+##Nanostring
 {
   GSE39582_exp_matrix <- t(scale(t(GSE39582_exp_matrix[,sample_5FU])))
   GSE39582.RFS <- GSE39582_exp_matrix[hub_genes,]
@@ -517,21 +502,9 @@ library(YuGene)
     return(unique_exp)
   }
   
-  ##1-2-3均值表达
-  nanostring_23_expAverage <- nanostring.exp.process(nanostring.exp = nanostring_23_exp,
-                                                     method = "average")
-  ##1-2-3中值表达
-  nanostring_23_expMedian <- nanostring.exp.process(nanostring.exp = nanostring_23_exp,
-                                                    method = "median")
   ##1-2-3最大值表达
   nanostring_23_max <- nanostring.exp.process(nanostring.exp = nanostring_23_exp,
                                               method = "max")
-  ##1-2-3最小值表达
-  nanostring_23_min <- nanostring.exp.process(nanostring.exp = nanostring_23_exp,
-                                              method = "min")
-  ##1-2-3 MAD最大
-  nanostring_23_mad <- nanostring.exp.process(nanostring.exp = nanostring_23_exp,
-                                              method = "MAD")
 }
 
 #nanostring 用药样本
@@ -646,8 +619,6 @@ summary(uni.cox.PIK3CA)
 ##
 mul.cox <- coxph(Surv(time, event) ~ Group+Age+Stage+MSI, data = cox.info)
 summary(mul.cox)
-mul.cox1 <- coxph(Surv(time, event) ~ score+Age+Stage+MSI, data = cox.info)
-summary(mul.cox1)
 #基础森林图
 ggforest(mul.cox,  #coxph得到的Cox回归结果
          data = cox.info,  #数据集
@@ -657,226 +628,5 @@ ggforest(mul.cox,  #coxph得到的Cox回归结果
          refLabel = 'reference', #相对变量的数值标签，也可改为1
          noDigits = 3 #保留HR值以及95%CI的小数位数
 )
-ggforest(mul.cox1,  #coxph得到的Cox回归结果
-         data = cox.info,  #数据集
-         main = 'Hazard ratio of Nanostring',  #标题
-         cpositions = c(0.05, 0.15, 0.35),  #前三列距离
-         fontsize = 1, #字体大小
-         refLabel = 'reference', #相对变量的数值标签，也可改为1
-         noDigits = 3 #保留HR值以及95%CI的小数位数
-)
-
-################
-{
-  load("0.TCGA_XenaGDC/TCGA-COAD.Rdata")
-  #load("0.TCGA_XenaGDC/TCGA-READ.Rdata")
-  test_cli = rbind(test_cli)
-  test_matrix = cbind(test_matrix)
-  
-  tcga_drug = c(readRDS("0.TCGA_XenaGDC/chemo_5fu_COAD.RDS"))
-  
-  tcga_drug = intersect(paste0(tcga_drug,"-01A"),colnames(test_matrix))
-  test_cli = test_cli[tcga_drug,2:3]
-  test_matrix_z <- t(scale(t(test_matrix[,tcga_drug])))
-  
-  test <- data.frame(t(test_matrix_z[hub_genes,]),stringsAsFactors = F)
-  pred <- predict(grow.RFS, newdata=test)
-  score <- pred$predicted
-  group <- rep(0, length(score))
-  for (i in 1:length(group)) {
-    if( score[i]<=cut_off) {
-      group[i]<-"low"
-    } else{
-      group[i]<-"high"
-    }
-  }
-  
-  {
-    ##5-years
-    test_cli[which(test_cli[,1]>60),2] = 0
-    test_cli[which(test_cli[,1]>60),1] = 60
-  }
-  
-  surv.df <- data.frame(test_cli[,1], test_cli[,2], score,stringsAsFactors = F)
-  colnames(surv.df)[1:2] <- c("surtime", "censor")
-  test.survdiff <- survdiff(Surv(surtime,censor)~group,data=surv.df)
-  HR_temp <- (test.survdiff$obs[1]/test.survdiff$exp[1])/(test.survdiff$obs[2]/test.survdiff$exp[2])
-  HR_temp <- round(HR_temp,4)
-  p.val_temp <- round(1 - pchisq(test.survdiff$chisq, 1),4)
-  up95_temp <- exp(log(as.numeric(HR_temp)) + qnorm(0.975)*sqrt(1/test.survdiff$exp[2]+1/test.survdiff$exp[1]))
-  up95_temp <- round(up95_temp,4)
-  low95_temp <- exp(log(as.numeric(HR_temp)) - qnorm(0.975)*sqrt(1/test.survdiff$exp[2]+1/test.survdiff$exp[1]))
-  low95_temp <- round(low95_temp,4)
-  c_index_temp <- rcorr.cens(-surv.df$score, Surv(surv.df$surtime, surv.df$censor))[1]
-  c_index_temp <- round(c_index_temp,4)
-  plot(survfit(Surv(surtime,censor)~group,data=surv.df),xlab="Survival in months", ylab="Survival probability",
-       col=c("red","darkblue"),bty="l",lwd=4)
-  title(main="TCGA-COADREAD",cex.main=1, adj=0.4)
-  legend("topright", legend=c(paste0("bad response (N=",table(group)["high"],")"),paste0("good response (N=",table(group)["low"],")")), lty=1,col=c("red", "darkblue"),bty = "n",lwd = 4)
-  legend("bottomleft",legend=c(paste0("C index:",c_index_temp),
-                               paste0("p valu:",p.val_temp),
-                               paste0("HR:",HR_temp),
-                               paste0("up95:",up95_temp),
-                               paste0("low95:",low95_temp)))
-}
-
-coad_cliical <- read.table("0.TCGA_XenaGDC/COAD_clinicalMatrix",header = T,row.names = 1,
-                           sep = "\t",stringsAsFactors = F)
-#read.clinical = read.table("0.TCGA_XenaGDC/READ_clinicalMatrix",header = T,row.names = 1,
-#                           sep = "\t",stringsAsFactors = F)
-co_char = colnames(coad_cliical)
-coadread_cli = rbind(coad_cliical[,co_char])
-
-rownames(coadread_cli) = paste0(rownames(coadread_cli),"A")
-Age <- as.numeric(coadread_cli[rownames(test_cli),"age_at_initial_pathologic_diagnosis"])
-Sex <- coadread_cli[rownames(test_cli),"gender"]
-lymph_node_examined_count <- as.numeric(coadread_cli[rownames(test_cli),"lymph_node_examined_count"])
-
-Stage <- coadread_cli[rownames(test_cli),"pathologic_stage"]
-Stage[grep("III",Stage)] <- 3
-Stage[grep("II",Stage)] <- 2
-Stage <- factor(Stage,levels = c(2,3))
-
-Group <- factor(group,levels=c("low","high"))
-cox.info <- cbind(test_cli,Age) %>% cbind(Sex) %>% cbind(Stage) %>% cbind(Group)
-## group
-uni.cox.group <- coxph(Surv(RFS.time, RFS) ~ Group, data = cox.info)
-summary(uni.cox.group)
-## score
-uni.cox.score <- coxph(Surv(RFS.time, RFS) ~ score, data = cox.info)
-summary(uni.cox.score)
-## age
-uni.cox.age <- coxph(Surv(RFS.time, RFS) ~ Age, data = cox.info)
-summary(uni.cox.age)
-## sex
-uni.cox.sex <- coxph(Surv(RFS.time, RFS) ~ Sex, data = cox.info)
-summary(uni.cox.sex)
-## stage
-uni.cox.stgae<- coxph(Surv(RFS.time, RFS) ~ Stage, data = cox.info)
-summary(uni.cox.stgae)
-##group+age+sex+lymph_node_examined_count
-mul.cox <- coxph(Surv(RFS.time, RFS) ~ Group+Age+Sex+Stage, data = cox.info)
-summary(mul.cox)
-#基础森林图
-ggforest(mul.cox,  #coxph得到的Cox回归结果
-         data = cox.info,  #数据集
-         main = 'Hazard ratio of TCGA',  #标题
-         cpositions = c(0.05, 0.15, 0.35),  #前三列距离
-         fontsize = 1, #字体大小
-         refLabel = 'reference', #相对变量的数值标签，也可改为1
-         noDigits = 3 #保留HR值以及95%CI的小数位数
-)
-
-
-
-
-
-
-
-
-
-
-########not run##########TCGA testing cohort#####
-##re-construct RSF prognosis model according to the RFS time of GSE39582 with 5-FU ACT
-library(YuGene)
-#select the sample of training set
-sample_5FU <- drug_5fu_FUFOL_FOLFOX_FOLFIRI$GEOID
-#GSE39582_exp_matrix<-t(scale(t(GSE39582_exp_matrix))) ###z-score标准化
-GSE39582_exp_matrix<-YuGene(GSE39582_exp_matrix) ###列是样本/标准化
-GSE39582.RFS <- GSE39582_exp_matrix[hub_genes,sample_5FU]
-#prognosis model
-time <- clinical_infor_df[sample_5FU,]$time
-event <- clinical_infor_df[sample_5FU,]$event
-train.matrix <- data.frame(time = time, event = event, t(GSE39582.RFS), stringsAsFactors = F)
-#select the optimal seed?
-set.seed(1234567)
-grow.RFS=rfsrc(Surv(time,event) ~.,data =train.matrix,ntree = 1000,nsplit = 2)
-grow.RFS
-
-load("E:/colon cancer/TCGA/tumorRPKM_19_new.Rdata")
-#load("E:/colon cancer/primary data/test/TCGA RSEM/TCGA.RData")
-#test_matrix_z <- YuGene(test_matrix)
-test_matrix_log2 <- log2(test_matrix+1)
-test_matrix_z <- YuGene(test_matrix_log2)
-#药物样本id
-#drug_sample <- read.table("E:/colon cancer/cc/drug_id.txt",sep="\t",stringsAsFactors = F) ##药物样本id
-#drug_sample <- sub("-01.","-01",drug_sample$V1)
-
-drug_sample <- read.table("E:/colon cancer/TCGA/TCGA_drug_sample.txt",header = T,sep="\t",stringsAsFactors = F) ##药物样本id
-drug_sample <- paste0(drug_sample$bcr_patient_barcode,"-01")
-
-mid_drug <- intersect(colnames(test_matrix),drug_sample)
-test_cli <- test_cli[mid_drug,]
-test_matrix <- test_matrix_z[,mid_drug]
-
-############################################################################
-############################################################################
-test <- data.frame(t(test_matrix[hub_genes,]),stringsAsFactors = F)
-
-pred <- predict(grow.RFS, newdata=test)
-score <- pred$predicted
-group <- rep(0, length(score))
-for (i in 1:length(group)) {
-  if( score[i]<=median(score)) {
-    group[i]<-"low"
-  } else{
-    group[i]<-"high"
-  }
-}
-surv.df <- data.frame(test_cli[,1], test_cli[,2], score,stringsAsFactors = F)
-colnames(surv.df)[1:2] <- c("surtime", "censor")
-test.survdiff <- survdiff(Surv(surtime,censor)~group,data=surv.df)
-HR_temp <- (test.survdiff$obs[2]/test.survdiff$exp[2])/(test.survdiff$obs[1]/test.survdiff$exp[1])
-HR_temp <- round(HR_temp,4)
-p.val_temp <- round(1 - pchisq(test.survdiff$chisq, 1),4)
-up95_temp <- exp(log(as.numeric(HR_temp)) + qnorm(0.975)*sqrt(1/test.survdiff$exp[2]+1/test.survdiff$exp[1]))
-up95_temp <- round(up95_temp,4)
-low95_temp <- exp(log(as.numeric(HR_temp)) - qnorm(0.975)*sqrt(1/test.survdiff$exp[2]+1/test.survdiff$exp[1]))
-low95_temp <- round(low95_temp,4)
-c_index_temp <- rcorr.cens(-surv.df$score, Surv(surv.df$surtime, surv.df$censor))[1]
-c_index_temp <- round(c_index_temp,4)
-plot(survfit(Surv(surtime,censor)~group,data=surv.df),xlab="Survival in months", ylab="Survival probability",
-     col=c("red","darkblue"),bty="l",lwd=4)
-title(main=paste("TCGA", "(pvalue=", p.val_temp, ")", sep="" ),cex.main=1, adj=0.4)
-legend("topright", legend=c("high","low"), lty=1,col=c("red", "darkblue"),bty = "n",lwd = 4)
-legend("bottomleft",legend=c(paste0("C index:",c_index_temp),
-                             paste0("p valu:",p.val_temp),
-                             paste0("HR:",HR_temp),
-                             paste0("up95:",up95_temp),
-                             paste0("low95:",low95_temp)))
-
-
-
-TCGA_cliical <- read.table("E:/colon cancer/TCGA/COAD_clinicalMatrix.txt",header = T,row.names = 1,
-                           sep = "\t",stringsAsFactors = F)
-
-TCGA_cliical_d <- TCGA_cliical[rownames(test_cli),]
-Age <- as.numeric(TCGA_cliical_d[rownames(test_cli),"age_at_initial_pathologic_diagnosis"])
-Sex <- TCGA_cliical_d[rownames(test_cli),"gender"]
-
-Stage <- TCGA_cliical_d[rownames(test_cli),"pathologic_stage"]
-Stage[grep("III",Stage)] <- 3
-Stage[grep("II",Stage)] <- 2
-Stage <- factor(Stage,levels = c(2,3))
-
-
-group <- factor(group,levels=c("low","high"))
-cox.info <- cbind(test_cli,Age) %>% cbind(Sex) %>% cbind(Stage) %>% cbind(group)
-
-## group
-uni.cox.group <- coxph(Surv(time, event) ~ group, data = cox.info)
-summary(uni.cox.group)
-## age
-uni.cox.age <- coxph(Surv(time, event) ~ Age, data = cox.info)
-summary(uni.cox.age)
-## sex
-uni.cox.sex <- coxph(Surv(time, event) ~ Sex, data = cox.info)
-summary(uni.cox.sex)
-## stage
-uni.cox.stgae<- coxph(Surv(time, event) ~ Stage, data = cox.info)
-summary(uni.cox.stgae)
-##group+age+sex+stage
-mul.cox <- coxph(Surv(time, event) ~ group+Age+Sex+Stage, data = cox.info)
-summary(mul.cox)
 
 
